@@ -1,0 +1,21 @@
+[package]
+name = "elephant_flows"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+env_logger = "0.8.4"
+iris-core = { path = "../../core" }
+iris-compiler = { path = "../../compiler" }
+iris-datatypes = { path = "../../datatypes" }
+lazy_static = "1.4.0"
+serde = { version = "1.0", features = ["derive"] }
+regex = "1.7.3"
+clap = { version = "3.2.23", features = ["derive"] }
+hdrhistogram = "7"
+once_cell = "1"
+plotters = "0.3"
+url = "2"
+publicsuffix = "2"
+csv = "1.3"
+array-init = "2.1"

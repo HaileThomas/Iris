@@ -27,6 +27,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 use quic::QuicConn;
+use serde::{Deserialize, Serialize};
 use strum_macros::EnumString;
 
 pub const IMPLEMENTED_PROTOCOLS: [&str; 5] = ["tls", "dns", "http", "quic", "ssh"];
@@ -209,7 +210,7 @@ pub enum SessionData {
 
 /// Supported session (encapsulated in L4 connection)
 /// Includes possibility for nested protocols
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SessionProto {
     Tls,
     Dns,
