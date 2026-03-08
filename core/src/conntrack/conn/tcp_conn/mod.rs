@@ -65,6 +65,21 @@ impl TcpConn {
             || (self.ctos.consumed_flags & RST | self.stoc.consumed_flags & RST) != 0
     }
 
+    /// Returns the correct inactivity timeout
+    #[inline]
+    pub(crate) fn inactivity_timeout(
+        &self,
+        default_inactivity_timeout: usize,
+        termination_inactivity_timeout: usize
+    ) -> usize {
+        match (self.ctos.seen_flags & self.stoc.seen_flags & FIN != 0) ||
+              (self.ctos.consumed_flags & RST | self.stoc.consumed_flags & RST) != 0
+        {
+            true => termination_inactivity_timeout,
+            false => default_inactivity_timeout,
+        }
+    }
+
     /// Updates connection termination flags
     // Useful if desired to track TCP connections without reassembly
     #[inline]

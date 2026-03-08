@@ -81,6 +81,7 @@ fn tracker_config() -> TrackerConfig {
         udp_inactivity_timeout: 60,
         tcp_inactivity_timeout: 60,
         tcp_establish_timeout: 30,
+        tcp_inactivity_timeout_seq_gap: 10,
         timeout_resolution: 10,
     }
 }

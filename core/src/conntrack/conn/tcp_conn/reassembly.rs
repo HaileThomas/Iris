@@ -17,6 +17,9 @@ pub(crate) struct TcpFlow {
     /// Flow status for consumed control packets.
     /// Matches TCP flag bits.
     pub(super) consumed_flags: u8,
+    /// Flow status for observed (not reassembled) control packets.
+    /// Matches TCP flag bits.
+    pub(super) seen_flags: u8,
     /// Out-of-order buffer
     pub(crate) ooo_buf: OutOfOrderBuffer,
     /// Is this the flow originator ("client")
@@ -33,6 +36,7 @@ impl TcpFlow {
             next_seq: None,
             last_ack: None,
             consumed_flags: 0,
+            seen_flags: 0,
             ooo_buf: OutOfOrderBuffer::new(capacity),
             orig: false,
             observed: 0,
@@ -47,6 +51,7 @@ impl TcpFlow {
             next_seq: Some(next_seq),
             last_ack: Some(ack),
             consumed_flags: flags,
+            seen_flags: flags,
             ooo_buf: OutOfOrderBuffer::new(capacity),
             orig,
             observed: 1,
@@ -68,6 +73,7 @@ impl TcpFlow {
         let cur_seq = segment.seq_no();
         self.observed += 1;
         segment.ctxt.reassembled = true;
+        self.seen_flags |= segment.flags();
 
         if let Some(next_seq) = self.next_seq {
             if next_seq == cur_seq {
