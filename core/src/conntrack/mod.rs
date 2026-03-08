@@ -128,7 +128,7 @@ where
                     conn.inactivity_window = match &conn.l4conn {
                         L4Conn::Tcp(tcp) => tcp.inactivity_timeout(
                             self.config.tcp_inactivity_timeout,
-                            self.config.tcp_inactivity_timeout_seq_gap),
+                            self.config.tcp_reassembly_timeout),
                         L4Conn::Udp(_) => self.config.udp_inactivity_timeout,
                     };
                 }
@@ -227,7 +227,7 @@ pub(crate) struct TrackerConfig {
     pub(super) tcp_establish_timeout: usize,
     /// Time to expire TCP connections that have received termination flags
     /// but have not yet been removed due to out-of-order packets (in milliseconds).
-    pub(super) tcp_inactivity_timeout_seq_gap: usize,
+    pub(super) tcp_reassembly_timeout: usize,
     /// Frequency to check for inactive streams (in milliseconds).
     pub(super) timeout_resolution: usize,
 }
@@ -240,7 +240,7 @@ impl From<&ConnTrackConfig> for TrackerConfig {
             udp_inactivity_timeout: config.udp_inactivity_timeout,
             tcp_inactivity_timeout: config.tcp_inactivity_timeout,
             tcp_establish_timeout: config.tcp_establish_timeout,
-            tcp_inactivity_timeout_seq_gap: config.tcp_inactivity_timeout_seq_gap,
+            tcp_reassembly_timeout: config.tcp_reassembly_timeout,
             timeout_resolution: config.timeout_resolution,
         }
     }

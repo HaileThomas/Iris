@@ -66,17 +66,17 @@ impl TcpConn {
     }
 
     /// Returns the correct inactivity timeout
+    /// (reassembly timeout if there are out-of-order segments, default otherwise)
     #[inline]
     pub(crate) fn inactivity_timeout(
         &self,
         default_inactivity_timeout: usize,
-        termination_inactivity_timeout: usize
+        reassembly_timeout: usize
     ) -> usize {
-        match (self.ctos.seen_flags & self.stoc.seen_flags & FIN != 0) ||
-              (self.ctos.consumed_flags & RST | self.stoc.consumed_flags & RST) != 0
+        match self.ctos.ooo_buf.is_empty() && self.stoc.ooo_buf.is_empty()
         {
-            true => termination_inactivity_timeout,
-            false => default_inactivity_timeout,
+            true => default_inactivity_timeout,
+            false => reassembly_timeout,
         }
     }
 
