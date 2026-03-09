@@ -9,10 +9,11 @@ use iris_core::{config::load_config, Runtime};
 use iris_core::protocols::stream::Session;
 use utils::*;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 const ELEPHANT_MIN_DURATION_SECS: u64 = 20;
 const ELEPHANT_MIN_THROUGHPUT_BPS: u64 = 1_000_000; // 1 Mbps
+const MIN_PACKETS: u64 = 5;
 
 pub(crate) static TOTAL_BYTES: AtomicU64 = AtomicU64::new(0);
 pub(crate) static TOTAL_PAYLOAD_BYTES: AtomicU64 = AtomicU64::new(0);
@@ -24,6 +25,7 @@ pub(crate) static ELEPHANT_PACKETS: AtomicU64 = AtomicU64::new(0);
 pub(crate) static ELEPHANT_FLOWS: AtomicU64 = AtomicU64::new(0);
 pub(crate) static SCANNING_BYTES: AtomicU64 = AtomicU64::new(0);
 pub(crate) static SCANNING_FLOWS: AtomicU64 = AtomicU64::new(0);
+pub(crate) static LONG_ONLY: AtomicBool = AtomicBool::new(false);
 
 // CLI
 #[derive(Parser, Debug)]
@@ -36,6 +38,8 @@ struct Args {
         default_value = "./configs/offline.toml"
     )]
     config: PathBuf,
+    #[clap(short, long)] // defaults to false
+    long_only: bool,
 }
 
 #[callback("tcp or udp,level=L4Terminated,parsers=http&tls&quic")]
@@ -57,10 +61,21 @@ fn conn_done(
         return;
     }
 
-    if (vol.last_ts - vol.start_ts).as_secs() < ELEPHANT_MIN_DURATION_SECS ||
-        vol.curr_throughput_bps() < ELEPHANT_MIN_THROUGHPUT_BPS
-    {
-        return;
+    if LONG_ONLY.load(Ordering::Relaxed) {
+        // Drop non-elephant flows
+        if (vol.last_ts - vol.start_ts).as_secs() < ELEPHANT_MIN_DURATION_SECS ||
+            vol.curr_throughput_bps() < ELEPHANT_MIN_THROUGHPUT_BPS
+        {
+            return;
+        }
+    } else {
+        // Discard extremely short or unanswered flows
+        if vol.fwd_pkts == 0 ||
+           vol.rev_pkts == 0 ||
+           vol.packets < MIN_PACKETS
+        {
+            return;
+        }
     }
 
     ELEPHANT_BYTES.fetch_add(vol.total_bytes as u64, Ordering::Relaxed);
@@ -78,6 +93,7 @@ fn main() {
     env_logger::init();
     let args = Args::parse();
     let config = load_config(&args.config);
+    LONG_ONLY.store(args.long_only, Ordering::SeqCst);
     let mut runtime: Runtime<SubscribedWrapper> = Runtime::new(config, filter).unwrap();
     runtime.run();
     println!("Done running");
