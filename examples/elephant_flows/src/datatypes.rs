@@ -91,6 +91,9 @@ impl ConnVolume {
 
     pub fn curr_throughput_bps(&self) -> u64 {
         let duration_secs = (self.last_ts - self.start_ts).as_secs();
+        if duration_secs == 0 {
+            return 0;
+        }
         self.total_bytes.saturating_mul(8) / duration_secs
     }
 }

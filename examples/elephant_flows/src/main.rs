@@ -42,6 +42,11 @@ struct Args {
     long_only: bool,
 }
 
+fn is_elephant(vol: &ConnVolume) -> bool {
+    (vol.last_ts - vol.start_ts).as_secs() >= ELEPHANT_MIN_DURATION_SECS &&
+            vol.curr_throughput_bps() >= ELEPHANT_MIN_THROUGHPUT_BPS
+}
+
 #[callback("tcp or udp,level=L4Terminated,parsers=http&tls&quic")]
 fn conn_done(
     vol: &ConnVolume,
@@ -55,33 +60,32 @@ fn conn_done(
         TOTAL_FLOWS.fetch_add(1, Ordering::Relaxed);
         TOTAL_PACKETS.fetch_add(vol.packets, Ordering::Relaxed);
     }
-    if vol.packets == 1 {
+    if vol.fwd_pkts == 0 || vol.rev_pkts == 0 {
         SCANNING_BYTES.fetch_add(vol.total_bytes as u64, Ordering::Relaxed);
         SCANNING_FLOWS.fetch_add(1, Ordering::Relaxed);
         return;
     }
 
+    let is_elephant_ = is_elephant(vol);
+
     if LONG_ONLY.load(Ordering::Relaxed) {
         // Drop non-elephant flows
-        if (vol.last_ts - vol.start_ts).as_secs() < ELEPHANT_MIN_DURATION_SECS ||
-            vol.curr_throughput_bps() < ELEPHANT_MIN_THROUGHPUT_BPS
-        {
+        if is_elephant_ {
             return;
         }
     } else {
-        // Discard extremely short or unanswered flows
-        if vol.fwd_pkts == 0 ||
-           vol.rev_pkts == 0 ||
-           vol.packets < MIN_PACKETS
-        {
+        // Discard extremely short flows
+        if vol.packets < MIN_PACKETS {
             return;
         }
     }
 
-    ELEPHANT_BYTES.fetch_add(vol.total_bytes as u64, Ordering::Relaxed);
-    ELEPHANT_PAYLOAD_BYTES.fetch_add(vol.payload_bytes as u64, Ordering::Relaxed);
-    ELEPHANT_FLOWS.fetch_add(1, Ordering::Relaxed);
-    ELEPHANT_PACKETS.fetch_add(vol.packets, Ordering::Relaxed);
+    if is_elephant_ {
+        ELEPHANT_BYTES.fetch_add(vol.total_bytes as u64, Ordering::Relaxed);
+        ELEPHANT_PAYLOAD_BYTES.fetch_add(vol.payload_bytes as u64, Ordering::Relaxed);
+        ELEPHANT_FLOWS.fetch_add(1, Ordering::Relaxed);
+        ELEPHANT_PACKETS.fetch_add(vol.packets, Ordering::Relaxed);
+    }
 
     let features = ConnVolumeCsvRow::new(&vol, session, ft);
     write_row(&features, core_id);
