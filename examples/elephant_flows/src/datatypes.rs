@@ -145,13 +145,13 @@ impl ConnVolumeCsvRow {
         let end_ts = start_ts + duration_secs;
 
         let upload_throughput = if duration_secs > 0.0 {
-            (raw.fwd_payload_bytes as f64 * 8.0) / duration_secs
+            (raw.fwd_total_bytes as f64 * 8.0) / duration_secs
         } else {
             0.0
         };
 
         let download_throughput = if duration_secs > 0.0 {
-            (raw.rev_payload_bytes as f64 * 8.0) / duration_secs
+            (raw.rev_total_bytes as f64 * 8.0) / duration_secs
         } else {
             0.0
         };

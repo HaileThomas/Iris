@@ -46,6 +46,7 @@ pub(crate) fn combine_results() {
 
         let path = format!("{}{}.csv", OUTFILE_PREFIX, core_id);
         let content = std::fs::read(&path).unwrap();
+        // TODO skip header line for all but first file
         output.extend_from_slice(&content);
         std::fs::remove_file(&path).unwrap();
     }
