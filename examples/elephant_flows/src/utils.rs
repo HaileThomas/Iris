@@ -39,15 +39,27 @@ pub(crate) fn combine_results() {
     println!("Combining results from {} cores...", ARR_LEN);
     let mut output = Vec::new();
 
-    for core_id in 0..ARR_LEN {
+    let mut first_nonempty = true;
+    for core_id in 1..ARR_LEN { // core 0 is monitoring core
         let ptr = results()[core_id].load(Ordering::Relaxed);
         let wtr = unsafe { &mut *ptr };
         wtr.flush().unwrap();
 
         let path = format!("{}{}.csv", OUTFILE_PREFIX, core_id);
         let content = std::fs::read(&path).unwrap();
-        // TODO skip header line for all but first file
-        output.extend_from_slice(&content);
+        if content.is_empty() {
+            std::fs::remove_file(&path).unwrap();
+            continue;
+        }
+        if first_nonempty {
+            output.extend_from_slice(&content);
+            first_nonempty = false;
+        } else {
+            // skip csv header
+            if let Some(idx) = content.iter().position(|&b| b == b'\n') {
+                output.extend_from_slice(&content[idx + 1..]);
+            }
+        }
         std::fs::remove_file(&path).unwrap();
     }
 
