@@ -1,14 +1,18 @@
 [package]
-name = "basic"
+name = "flow_features"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
 env_logger = "0.8.4"
 iris-core = { path = "../../core" }
-iris-compiler = { path = "../../compiler" }
+iris-filtergen = { path = "../../compiler" }
 iris-datatypes = { path = "../../datatypes" }
 lazy_static = "1.4.0"
 serde = { version = "1.0", features = ["derive"] }
 regex = "1.7.3"
-clap = { version = "3.2.23", features = ["derive"] }
+array-init = "2.1"
+csv = "1"
+dns-parser="0.8"
+serde_json = "1"
+const_format = "0.2"

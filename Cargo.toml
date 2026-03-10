@@ -11,6 +11,7 @@ members = [
     "examples/open_vpn",
     "examples/combined",
     "examples/elephant_flows",
+    "examples/flow_features"
 ]
 resolver = "2"
 
