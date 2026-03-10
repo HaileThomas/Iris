@@ -1,7 +1,7 @@
-use retina_core::{config::load_config, CoreId, Runtime};
-use retina_datatypes::{ConnRecord, DnsTransaction, TlsHandshake};
-use retina_datatypes::conn_fts::InterArrivals;
-use retina_filtergen::{filter, retina_main};
+use iris_core::{config::load_config, CoreId, Runtime};
+use iris_datatypes::{DnsTransaction, TlsHandshake, ConnRecord};
+use iris_datatypes::conn_fts::InterArrivals;
+use iris_compiler::*;
 
 mod conn_features;
 mod dns_features;
@@ -14,15 +14,24 @@ use conn_features::ConnFeatures;
 use dns_features::DnsFeatures;
 use tls_features::TlsFeatures;
 
-#[filter("tcp or udp")]
-fn flow_cb(conn: &ConnRecord, iat: &InterArrivals, core_id: &CoreId) {
+#[callback("tcp or udp,level=L4Terminated")]
+fn flow_cb(
+    conn: &ConnRecord,
+    iat: &InterArrivals,
+    core_id: &CoreId
+) {
     if let Some(features) = ConnFeatures::from_conn(conn, iat) {
         csv_output::write(&features, core_id);
     }
 }
 
-#[filter("tls or quic")]
-fn flow_cb_tls(conn: &ConnRecord, iat: &InterArrivals, proto: &TlsHandshake, core_id: &CoreId) {
+#[callback("tls or quic,level=L4Terminated")]
+fn flow_cb_tls(
+    conn: &ConnRecord,
+    iat: &InterArrivals,
+    proto: &TlsHandshake,
+    core_id: &CoreId
+) {
     if let (Some(conn_features), Some(tls_features)) = (
         ConnFeatures::from_conn(conn, iat),
         TlsFeatures::from_tls(proto, conn.client().ip(), conn.server().ip()),
@@ -31,8 +40,13 @@ fn flow_cb_tls(conn: &ConnRecord, iat: &InterArrivals, proto: &TlsHandshake, cor
     }
 }
 
-#[filter("dns")]
-fn flow_cb_dns(conn: &ConnRecord, iat: &InterArrivals, proto: &DnsTransaction, core_id: &CoreId) {
+#[callback("dns,level=L4Terminated")]
+fn flow_cb_dns(
+    conn: &ConnRecord,
+    iat: &InterArrivals,
+    proto: &DnsTransaction,
+    core_id: &CoreId
+) {
     if let (Some(conn_features), Some(dns_features)) = (
         ConnFeatures::from_conn(conn, iat),
         DnsFeatures::from_dns(proto, conn.client().ip()),
@@ -41,7 +55,10 @@ fn flow_cb_dns(conn: &ConnRecord, iat: &InterArrivals, proto: &DnsTransaction, c
     }
 }
 
-#[retina_main(3)]
+// Needed to use any data types from `datatypes/`
+#[input_files("$IRIS_HOME/datatypes/data.txt")]
+// Needed to indicate end of macros (I will rename this to "macro_end" or something)
+#[iris_main]
 fn main() {
     let config = load_config("./configs/online.toml");
     let mut runtime: Runtime<SubscribedWrapper> = Runtime::new(config, filter).unwrap();

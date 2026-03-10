@@ -1,5 +1,5 @@
-use retina_datatypes::DnsTransaction;
-use retina_core::protocols::stream::dns::Data;
+use iris_datatypes::DnsTransaction;
+use iris_core::protocols::stream::dns::Data;
 use serde::Serialize;
 use std::net::IpAddr;
 use crate::hash_utils::hash_ip;
@@ -9,7 +9,7 @@ pub struct DnsFeatures {
     pub client_ip_hash:               u64,  // hash of querying client IP
     pub resolved_ip_hash_a:           u64,  // hash of first A record answer IP, 0 if none
     pub resolved_ip_hash_aaaa:        u64,  // hash of first AAAA record answer IP, 0 if none
-    
+
     pub query_num_questions:          u16,  // number of questions in query section (typically 1)
     pub query_recursion_desired:      u8,   // RD bit set in query (0/1)
     pub has_query:                    u8,   // 1 if a query was observed, 0 if response-only

@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::{AtomicPtr, Ordering};
 use std::sync::OnceLock;
-use retina_core::CoreId;
+use iris_core::CoreId;
 
 const NUM_CORES: usize = 16;
 const ARR_LEN: usize = NUM_CORES + 1;

@@ -275,7 +275,7 @@ impl Tracked for ConnRecord {
         datatype_group("ConnRecord,level=L4InPayload")
     )]
     fn update(&mut self, pdu: &L4Pdu) {
-        self.update_data(pdu);
+        self.update_data(pdu, N_PACKETS as u64);
     }
 
     fn phase_tx(&mut self, _: &StateTxData) {}

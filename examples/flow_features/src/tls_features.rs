@@ -1,4 +1,4 @@
-use retina_datatypes::TlsHandshake;
+use iris_datatypes::TlsHandshake;
 use serde::Serialize;
 use std::net::IpAddr;
 use crate::hash_utils::hash_ip;
@@ -125,7 +125,7 @@ impl TlsFeatures {
         let server_cert1_len = tls.server_certificates.get(1).map(|c| c.raw.len() as u32).unwrap_or(0);
 
         // --- Key exchange fields ---
-        use retina_core::protocols::stream::tls::{ClientKeyExchange, ServerKeyExchange};
+        use iris_core::protocols::stream::tls::{ClientKeyExchange, ServerKeyExchange};
         let has_server_kex = tls.server_key_exchange.is_some() as u8;
         let has_client_kex = tls.client_key_exchange.is_some() as u8;
         let kex_type: u8 = match &tls.server_key_exchange {

@@ -1,6 +1,3 @@
-fn main() {
-    println!("Hello, world!");
-}
 use clap::Parser;
 use iris_compiler::*;
 use iris_core::subscription::{FilterResult, StreamingCallback, StreamingFilter};
