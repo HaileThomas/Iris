@@ -1,3 +1,0 @@
-# Basic
-
-An introductory example.
