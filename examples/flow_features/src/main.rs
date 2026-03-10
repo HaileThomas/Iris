@@ -34,7 +34,7 @@ fn flow_cb_tls(
 ) {
     if let (Some(conn_features), Some(tls_features)) = (
         ConnFeatures::from_conn(conn, iat),
-        TlsFeatures::from_tls(proto, conn.client().ip(), conn.server().ip()),
+        TlsFeatures::from_tls(proto),
     ) {
         csv_output::write_tls(&conn_features, &tls_features, core_id);
     }
