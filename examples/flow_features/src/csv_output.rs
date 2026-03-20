@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicPtr, Ordering};
 use std::sync::OnceLock;
 use iris_core::CoreId;
 
-const NUM_CORES: usize = 16;
+const NUM_CORES: usize = 32;
 const ARR_LEN: usize = NUM_CORES + 1;
 
 fn serialize_pair<A, B>(

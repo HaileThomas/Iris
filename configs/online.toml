@@ -6,26 +6,26 @@ capacity = 8_388_608
 cache_size = 512
 
 [online]
-duration = 120
-nb_rxd = 32768
+duration = 7200
+nb_rxd = 65536
 promiscuous = true
 mtu = 1500
-hardware_assist = true
+hardware_assist = false
 [[online.ports]]
 device = "0000:3b:00.0"
-cores = [ 1, 2, 3, 4, 5, 6, 7, 8 ]
+cores = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 ]
 
 [online.ports.sink]
-core = 17
-nb_buckets = 512
+core = 33
+nb_buckets = 384
 
 [[online.ports]]
 device = "0000:d8:00.0"
-cores = [ 9, 10, 11, 12, 13, 14, 15, 16 ]
+cores = [ 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]
 
 [online.ports.sink]
-core = 18
-nb_buckets = 512
+core = 34
+nb_buckets = 384
 
 [conntrack]
 max_connections = 10000000
