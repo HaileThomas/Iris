@@ -1,7 +1,7 @@
 use const_format::concatcp;
 
 pub const CONN_HEADER: &str =
-    "src_ip_hash,dst_ip_hash,\
+    "first_seen_ts,src_ip_hash,dst_ip_hash,\
      src_ip_subn,dst_ip_subn,src_port,dst_port,protocol,\
      duration_ms,max_inactivity_ms,time_to_second_pkt_ms,\
      hist_syn,hist_synack,hist_ack,hist_data,hist_fin,hist_rst,\
@@ -32,7 +32,7 @@ pub const TLS_HEADER: &str =
     "has_client_hello,client_version,\
      client_num_supported_groups,client_num_sig_algs,client_num_alpn_protocols,\
      client_num_key_shares,client_num_supported_vers,\
-     client_has_sni,client_sni_len,client_has_session_id,client_session_id_len,\
+     client_has_sni,client_sni,client_sni_len,client_has_session_id,client_session_id_len,\
      client_has_compression,client_has_alpn,client_has_key_share,client_has_supported_vers,\
      has_server_hello,server_version,server_cipher_suite,\
      server_compression_alg,\
