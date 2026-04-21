@@ -98,6 +98,15 @@ impl FiveTuple {
             proto, src_port, dst_port
         )
     }
+
+    /// Returns the reverse of this five-tuple (orig & resp swapped).
+    pub fn reversed(&self) -> FiveTuple {
+        FiveTuple {
+            orig: self.resp,
+            resp: self.orig,
+            proto: self.proto,
+        }
+    }
 }
 
 impl fmt::Display for FiveTuple {
