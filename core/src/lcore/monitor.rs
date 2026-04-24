@@ -194,7 +194,7 @@ struct Display {
 impl Display {
     /// Display mempool usage
     fn mempool_usage(&self, ports: &BTreeMap<PortId, Vec<RxQueue>>) {
-        for name in ports.keys().map(|id| format!("mempool_{}", id.socket_id())) {
+        for name in ports.keys().map(|id| format!("mempool_standard_{}", id.socket_id())) {
             let cname = CString::new(name.clone()).expect("Invalid CString conversion");
             let mempool_raw = unsafe { dpdk::rte_mempool_lookup(cname.as_ptr()) };
             let avail_cnt = unsafe { dpdk::rte_mempool_avail_count(mempool_raw) };
@@ -257,7 +257,7 @@ impl Logger {
                 }
                 Err(error) => log::error!("{}", error),
             }
-            let name = format!("mempool_{}", port_id.socket_id());
+            let name = format!("mempool_standard_{}", port_id.socket_id());
             let cname = CString::new(name.clone()).expect("Invalid CString conversion");
             let mempool_raw = unsafe { dpdk::rte_mempool_lookup(cname.as_ptr()) };
             let avail_cnt = unsafe { dpdk::rte_mempool_avail_count(mempool_raw) };

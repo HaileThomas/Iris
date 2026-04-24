@@ -139,6 +139,11 @@ impl Port {
                 CoreId(*core_id),
             );
             q += 1;
+            queue_map.insert(
+                RxQueue::new(port_id, RxQueueId(q), RxQueueType::Split),
+                CoreId(*core_id),
+            );
+            q += 1;
         }
 
         if nb_buckets < rx_core_ids.len() {
@@ -178,15 +183,17 @@ impl Port {
     /// Configure port and setup RX queues.
     pub(crate) fn init(
         &self,
-        mempools: &mut BTreeMap<SocketId, Mempool>,
+        standard_mempools: &mut BTreeMap<SocketId, Mempool>,
+        split_mempools: &mut BTreeMap<SocketId, Mempool>,
         nb_rxd: usize,
         mtu: usize,
         promiscuous: bool,
     ) -> Result<()> {
         self.configure(promiscuous, mtu)?;
 
-        let mempool = mempools.get_mut(&self.id.socket_id()).unwrap();
-        self.setup_queues(mempool, nb_rxd)?;
+        let standard_mempool = standard_mempools.get_mut(&self.id.socket_id()).unwrap();
+        let split_mempool = split_mempools.get_mut(&self.id.socket_id()).unwrap();
+        self.setup_queues(standard_mempool, split_mempool, nb_rxd)?;
         self.display_info();
         Ok(())
     }
@@ -395,8 +402,12 @@ impl Port {
         Ok(())
     }
 
-    fn setup_queues(&self, mempool: &mut Mempool, nb_rxd: usize) -> Result<()> {
+    fn setup_queues(&self, standard_mempool: &mut Mempool, split_mempool: &mut Mempool, nb_rxd: usize) -> Result<()> {
         for rxqueue in self.queue_map.keys() {
+            let mempool = match rxqueue.ty {
+                RxQueueType::Split => &mut *split_mempool,
+                _ => &mut *standard_mempool,
+            };
             let ret = unsafe {
                 dpdk::rte_eth_rx_queue_setup(
                     self.id.raw(),
@@ -441,12 +452,15 @@ pub(crate) enum RxQueueType {
     Receive,
     /// Throwaway
     Sink,
+    /// Packets backed by buffer segmentation
+    Split
 }
 
 impl fmt::Display for RxQueueType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             RxQueueType::Receive => write!(f, "r"),
+            RxQueueType::Split => write!(f, "x"),
             RxQueueType::Sink => write!(f, "s"),
         }
     }

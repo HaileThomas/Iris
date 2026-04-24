@@ -22,13 +22,13 @@ pub(crate) struct Mempool {
 
 impl Mempool {
     /// Creates a new mbuf pool on socket_id
-    pub(crate) fn new(config: &MempoolConfig, socket_id: SocketId, mtu: usize) -> Result<Self> {
+    pub(crate) fn new(config: &MempoolConfig, socket_id: SocketId, mtu: usize, prefix: &str) -> Result<Self> {
         let data_room = crate::port::mtu_to_max_frame_len(mtu as u32);
         let data_room_aligned = round_up(data_room, RX_BUF_ALIGN);
         let mbuf_size = data_room_aligned + dpdk::RTE_PKTMBUF_HEADROOM;
         let mbuf_size = cmp::max(mbuf_size, dpdk::RTE_MBUF_DEFAULT_BUF_SIZE);
 
-        let name = format!("mempool_{}", socket_id);
+        let name = format!("mempool_{}_{}", prefix, socket_id);
         let cname = CString::new(name.clone()).expect("Invalid CString conversion");
         let mempool = unsafe {
             dpdk::rte_pktmbuf_pool_create(
