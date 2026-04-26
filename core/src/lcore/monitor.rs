@@ -194,19 +194,24 @@ struct Display {
 impl Display {
     /// Display mempool usage
     fn mempool_usage(&self, ports: &BTreeMap<PortId, Vec<RxQueue>>) {
-        for name in ports.keys().map(|id| format!("mempool_standard_{}", id.socket_id())) {
-            let cname = CString::new(name.clone()).expect("Invalid CString conversion");
-            let mempool_raw = unsafe { dpdk::rte_mempool_lookup(cname.as_ptr()) };
-            let avail_cnt = unsafe { dpdk::rte_mempool_avail_count(mempool_raw) };
-            let inuse_cnt = unsafe { dpdk::rte_mempool_in_use_count(mempool_raw) };
-
-            println!(
-                "{} avail: {}, in use: {} ({:.3}%)",
-                name,
-                avail_cnt,
-                inuse_cnt,
-                100.0 * inuse_cnt as f64 / (inuse_cnt + avail_cnt) as f64
-            );
+        for port_id in ports.keys() {
+            for prefix in ["standard", "split_header", "split_remainder"] {
+                let name = format!("mempool_{}_{}", prefix, port_id.socket_id());
+                let cname = CString::new(name.clone()).expect("Invalid CString conversion");
+                let mempool_raw = unsafe { dpdk::rte_mempool_lookup(cname.as_ptr()) };
+                if mempool_raw.is_null() {
+                    continue;
+                }
+                let avail_cnt = unsafe { dpdk::rte_mempool_avail_count(mempool_raw) };
+                let inuse_cnt = unsafe { dpdk::rte_mempool_in_use_count(mempool_raw) };
+                println!(
+                    "{} avail: {}, in use: {} ({:.3}%)",
+                    name,
+                    avail_cnt,
+                    inuse_cnt,
+                    100.0 * inuse_cnt as f64 / (inuse_cnt + avail_cnt) as f64
+                );
+            }
         }
     }
 }
@@ -230,8 +235,10 @@ impl Logger {
                     wtr.write_field(label)?;
                 }
             }
-            wtr.write_field("mempool_avail_cnt")?;
-            wtr.write_field("mempool_inuse_cnt")?;
+            for prefix in ["standard", "split_header", "split_remainder"] {
+                wtr.write_field(format!("mempool_{}_avail_cnt", prefix))?;
+                wtr.write_field(format!("mempool_{}_inuse_cnt", prefix))?;
+            }
             wtr.write_record(None::<&[u8]>)?;
             wtr.flush()?;
         }
@@ -257,13 +264,18 @@ impl Logger {
                 }
                 Err(error) => log::error!("{}", error),
             }
-            let name = format!("mempool_standard_{}", port_id.socket_id());
-            let cname = CString::new(name.clone()).expect("Invalid CString conversion");
-            let mempool_raw = unsafe { dpdk::rte_mempool_lookup(cname.as_ptr()) };
-            let avail_cnt = unsafe { dpdk::rte_mempool_avail_count(mempool_raw) };
-            let inuse_cnt = unsafe { dpdk::rte_mempool_in_use_count(mempool_raw) };
-            wtr.write_field(avail_cnt.to_string())?;
-            wtr.write_field(inuse_cnt.to_string())?;
+            for prefix in ["standard", "split_header", "split_remainder"] {
+                let name = format!("mempool_{}_{}", prefix, port_id.socket_id());
+                let cname = CString::new(name).expect("Invalid CString conversion");
+                let mempool_raw = unsafe { dpdk::rte_mempool_lookup(cname.as_ptr()) };
+                if mempool_raw.is_null() {
+                    continue;
+                }
+                let avail_cnt = unsafe { dpdk::rte_mempool_avail_count(mempool_raw) };
+                let inuse_cnt = unsafe { dpdk::rte_mempool_in_use_count(mempool_raw) };
+                wtr.write_field(avail_cnt.to_string())?;
+                wtr.write_field(inuse_cnt.to_string())?;
+            }
             wtr.write_record(None::<&[u8]>)?;
         }
         for wtr in self.port_wtrs.values_mut() {
