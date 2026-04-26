@@ -12,7 +12,7 @@ use crate::config::*;
 use crate::dpdk;
 use crate::filter::FilterFactory;
 use crate::lcore::SocketId;
-use crate::memory::mempool::Mempool;
+use crate::memory::mempool::{Mempool, SplitMempool};
 use crate::subscription::*;
 
 use std::collections::BTreeMap;
@@ -20,6 +20,8 @@ use std::ffi::CString;
 use std::sync::Arc;
 
 use anyhow::{bail, Result};
+
+pub(crate) const SPLIT_HDR_SIZE: u16 = 64; 
 
 /// The Iris runtime.
 ///
@@ -32,7 +34,7 @@ where
     #[allow(dead_code)]
     standard_mempools: BTreeMap<SocketId, Mempool>,
     #[allow(dead_code)]
-    split_mempools: BTreeMap<SocketId, Mempool>,
+    split_mempools: BTreeMap<SocketId, SplitMempool>,
     online: Option<OnlineRuntime<S>>,
     pub(crate) offline: Option<OfflineRuntime<S>>, // Public for testing only
     #[cfg(feature = "timing")]
@@ -80,7 +82,7 @@ where
 
         log::info!("Initializing Mempools...");
         let mut standard_mempools: BTreeMap<SocketId, Mempool> = BTreeMap::new();
-        let mut split_mempools: BTreeMap<SocketId, Mempool> = BTreeMap::new();
+        let mut split_mempools: BTreeMap<SocketId, SplitMempool> = BTreeMap::new();
         let socket_ids = config.get_all_socket_ids();
         let mtu = if let Some(online) = &config.online {
             online.mtu
@@ -97,7 +99,7 @@ where
             );
             split_mempools.insert(
                 socket_id,
-                Mempool::new(&config.mempool, socket_id, mtu, "split")?,
+                SplitMempool::new(&config.mempool, socket_id, SPLIT_HDR_SIZE, mtu)?,
             );
         }
 

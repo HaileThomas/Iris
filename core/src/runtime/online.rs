@@ -4,9 +4,10 @@ use crate::filter::Filter;
 use crate::lcore::monitor::Monitor;
 use crate::lcore::rx_core::RxCore;
 use crate::lcore::{CoreId, SocketId};
-use crate::memory::mempool::Mempool;
+use crate::memory::mempool::{Mempool, SplitMempool};
 use crate::port::*;
 use crate::subscription::*;
+use crate::runtime::SPLIT_HDR_SIZE;
 
 use std::collections::BTreeMap;
 use std::os::raw::{c_uint, c_void};
@@ -33,7 +34,7 @@ where
         config: &RuntimeConfig,
         options: OnlineOptions,
         standard_mempools: &mut BTreeMap<SocketId, Mempool>,
-        split_mempools: &mut BTreeMap<SocketId, Mempool>,
+        split_mempools: &mut BTreeMap<SocketId, SplitMempool>,
         hw_filter_str: String,
         subscription: Arc<Subscription<S>>,
     ) -> Self {
@@ -61,7 +62,7 @@ where
                     .expect("Unable to initialize standard mempool")
             });
             split_mempools.entry(socket_id).or_insert_with(|| {
-                Mempool::new(&config.mempool, socket_id, mtu, "split")
+                SplitMempool::new(&config.mempool, socket_id, SPLIT_HDR_SIZE, mtu)
                     .expect("Unable to initialize split mempool")
             });
             port.init(

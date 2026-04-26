@@ -100,3 +100,27 @@ pub(crate) enum MempoolError {
     #[error("Mbuf allocation failed: mempool exhausted.")]
     Exhausted,
 }
+
+/// A pair of mempools backing buffer-split RX queues.
+/// `header` receives the first `hdr_len` bytes of each packet.
+/// `remainder` receives the rest.
+pub(crate) struct SplitMempool {
+    pub(crate) header: Mempool,
+    pub(crate) remainder: Mempool,
+    pub(crate) hdr_len: u16,
+}
+
+impl SplitMempool {
+    pub(crate) fn new(
+        config: &MempoolConfig,
+        socket_id: SocketId,
+        hdr_len: u16,
+        remainder_mtu: usize,
+    ) -> Result<Self> {
+        let mut split_config = config.clone();
+        split_config.capacity = config.capacity / 16;
+        let header = Mempool::new(&split_config, socket_id, hdr_len as usize, "split_header")?;
+        let remainder = Mempool::new(&split_config, socket_id, remainder_mtu, "split_remainder")?;
+        Ok(SplitMempool { header, remainder, hdr_len })
+    }
+}

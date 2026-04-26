@@ -5,7 +5,7 @@ pub(crate) mod statistics;
 use crate::config::PortMap;
 use crate::dpdk;
 use crate::lcore::{CoreId, SocketId};
-use crate::memory::mempool::Mempool;
+use crate::memory::mempool::{Mempool, SplitMempool};
 
 use self::info::PortInfo;
 
@@ -184,7 +184,7 @@ impl Port {
     pub(crate) fn init(
         &self,
         standard_mempools: &mut BTreeMap<SocketId, Mempool>,
-        split_mempools: &mut BTreeMap<SocketId, Mempool>,
+        split_mempools: &mut BTreeMap<SocketId, SplitMempool>, 
         nb_rxd: usize,
         mtu: usize,
         promiscuous: bool,
@@ -350,6 +350,12 @@ impl Port {
             port_conf.rxmode.offloads |= dpdk::DEV_RX_OFFLOAD_VLAN_STRIP as u64;
         }
 
+        // turns on buffer split if supported
+        if dev_info.rx_offload_capa & dpdk::RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT as u64 != 0 {
+            port_conf.rxmode.offloads |= dpdk::RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT as u64;
+            port_conf.rxmode.offloads |= dpdk::RTE_ETH_RX_OFFLOAD_SCATTER as u64;
+        }
+
         {
             let nb_queues = self.queue_map.len() as u16;
             let ret = unsafe {
@@ -402,26 +408,84 @@ impl Port {
         Ok(())
     }
 
-    fn setup_queues(&self, standard_mempool: &mut Mempool, split_mempool: &mut Mempool, nb_rxd: usize) -> Result<()> {
+    fn setup_queues(
+        &self,
+        standard_mempool: &mut Mempool,
+        split_mempool: &mut SplitMempool,
+        nb_rxd: usize,
+    ) -> Result<()> {
         for rxqueue in self.queue_map.keys() {
-            let mempool = match rxqueue.ty {
-                RxQueueType::Split => &mut *split_mempool,
-                _ => &mut *standard_mempool,
+            match rxqueue.ty {
+                RxQueueType::Split => {
+                    self.setup_split_queue(rxqueue, split_mempool, nb_rxd)?
+                }
+                _ => {
+                    self.setup_standard_queue(rxqueue, standard_mempool, nb_rxd)?
+                }
             };
-            let ret = unsafe {
-                dpdk::rte_eth_rx_queue_setup(
-                    self.id.raw(),
-                    rxqueue.qid.raw(),
-                    nb_rxd as u16,
-                    self.id.socket_id().raw(),
-                    ptr::null(),
-                    mempool.raw_mut(),
-                )
-            };
-            if ret < 0 {
-                bail!("Failed to setup up RX queue {}", rxqueue);
-            }
         }
+
+        Ok(())
+    }
+
+    fn setup_split_queue(
+        &self,
+        rxqueue: &RxQueue,
+        split_mempool: &mut SplitMempool,
+        nb_rxd: usize,
+    ) -> Result<()> {
+        let mut rx_segs: [dpdk::rte_eth_rxseg; 2] = unsafe { mem::zeroed() };
+
+        rx_segs[0].split.length = split_mempool.hdr_len;
+        rx_segs[0].split.mp = split_mempool.header.raw_mut();
+
+        rx_segs[1].split.length = 0;
+        rx_segs[1].split.mp = split_mempool.remainder.raw_mut();
+
+        let mut rxq_conf: dpdk::rte_eth_rxconf = unsafe { mem::zeroed() };
+        rxq_conf.offloads = dpdk::RTE_ETH_RX_OFFLOAD_BUFFER_SPLIT as u64 | dpdk::RTE_ETH_RX_OFFLOAD_SCATTER as u64;
+        rxq_conf.rx_nseg = 2;
+        rxq_conf.rx_seg = rx_segs.as_mut_ptr();
+
+        let ret = unsafe {
+            dpdk::rte_eth_rx_queue_setup(
+                self.id.raw(),
+                rxqueue.qid.raw(),
+                nb_rxd as u16,
+                self.id.socket_id().raw(),
+                &rxq_conf,
+                ptr::null_mut(),
+            )
+        };
+
+        if ret < 0 {
+            bail!("Failed to setup split RX queue {}", rxqueue);
+        }
+
+        Ok(())
+    }
+
+    fn setup_standard_queue(
+        &self,
+        rxqueue: &RxQueue,
+        standard_mempool: &mut Mempool,
+        nb_rxd: usize,
+    ) -> Result<()> {
+        let ret = unsafe {
+            dpdk::rte_eth_rx_queue_setup(
+                self.id.raw(),
+                rxqueue.qid.raw(),
+                nb_rxd as u16,
+                self.id.socket_id().raw(),
+                ptr::null(),
+                standard_mempool.raw_mut(),
+            )
+        };
+
+        if ret < 0 {
+            bail!("Failed to setup standard RX queue {}", rxqueue);
+        }
+
         Ok(())
     }
 }
