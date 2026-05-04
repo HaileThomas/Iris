@@ -2,7 +2,7 @@ use crate::config::RuntimeConfig;
 use crate::dpdk;
 use crate::port::{statistics::PortStats, Port, PortId, RxQueue, RxQueueType};
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ffi::CString;
 use std::fmt;
 use std::fs;
@@ -194,7 +194,10 @@ struct Display {
 impl Display {
     /// Display mempool usage
     fn mempool_usage(&self, ports: &BTreeMap<PortId, Vec<RxQueue>>) {
-        for name in ports.keys().map(|id| format!("mempool_{}", id.socket_id())) {
+        let sockets: BTreeSet<_> = ports.keys().map(|id| id.socket_id()).collect();
+
+        for socket in sockets {
+            let name = format!("mempool_{}", socket);
             let cname = CString::new(name.clone()).expect("Invalid CString conversion");
             let mempool_raw = unsafe { dpdk::rte_mempool_lookup(cname.as_ptr()) };
             let avail_cnt = unsafe { dpdk::rte_mempool_avail_count(mempool_raw) };

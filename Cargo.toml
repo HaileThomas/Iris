@@ -3,6 +3,7 @@ members = [
     "core",
     "datatypes",
     "examples/basic",
+    "examples/flow_installation",
     "examples/enc_conns",
     "examples/benchmark",
     "tests/functionality/basic_test",
