@@ -1,5 +1,5 @@
 use iris_core::{
-    config::load_config,
+    config::{load_config, FlowMode},
     port::PortId,
     CoreId, FiveTuple, Runtime,
 };
@@ -34,6 +34,13 @@ fn main() {
     let port_devices: Vec<String> = config.online.as_ref()
         .map(|o| o.ports.iter().map(|p| p.device.clone()).collect())
         .unwrap_or_default();
+
+    let flow_mode = config.online.as_ref().map_or(FlowMode::Standard, |o| o.flow_mode);
+    flows::set_mode(flow_mode);
+
+    if flow_mode == FlowMode::Split {
+        flows::init_split_queues(&config);
+    }
 
     let _worker_handle = dispatcher::start_worker(rx_cores);
 
