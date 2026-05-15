@@ -255,6 +255,10 @@ impl Tracked for ConnRecord {
 /// Default value for maximum chunk capacity.
 const DEFAULT_CHUNK_CAPACITY: usize = 100;
 
+/// Histogram bucket boundaries for packet sizes (in bytes).
+/// Buckets: [0,64), [64,128), [128,256), [256,512), [512,1024), [1024,1500), [1500, ∞)
+pub const PKT_SIZE_BUCKETS: &[u32] = &[64, 128, 256, 512, 1024, 1500];
+
 /// A uni-directional flow.
 #[derive(Debug, Clone, Serialize)]
 pub struct Flow {
@@ -292,6 +296,8 @@ pub struct Flow {
     /// Maps relative sequence number of a content gap to the number of packets observed before it
     /// is filled. Only applies to TCP flows.
     pub gaps: HashMap<u32, u64>,
+    /// Packet size histogram.
+    pub pkt_size_hist: Vec<u64>,
 }
 
 impl Flow {
@@ -307,14 +313,22 @@ impl Flow {
             capacity: DEFAULT_CHUNK_CAPACITY,
             chunks: Vec::with_capacity(DEFAULT_CHUNK_CAPACITY),
             gaps: HashMap::new(),
+            pkt_size_hist: vec![0; PKT_SIZE_BUCKETS.len() + 1],
         }
     }
 
     #[inline]
     fn insert_segment(&mut self, segment: &L4Pdu) {
         self.nb_pkts += 1;
+        let pkt_len = segment.mbuf.data_len() as u32;
         self.nb_pkt_bytes += segment.mbuf.data_len() as u64;
 
+        let bucket = PKT_SIZE_BUCKETS
+            .iter()
+            .position(|&boundary| pkt_len < boundary)
+            .unwrap_or(PKT_SIZE_BUCKETS.len());
+        self.pkt_size_hist[bucket] += 1;
+        
         if segment.offset() > segment.mbuf.data_len()
             || (segment.offset() + segment.length()) > segment.mbuf.data_len()
         {
