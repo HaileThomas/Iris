@@ -16,7 +16,7 @@ pub const CONN_HEADER: &str =
      resp_mean_pkts_to_fill,resp_median_pkts_to_fill,\
      orig_iat_mean,orig_iat_median,orig_iat_min,orig_iat_max,orig_iat_std,\
      resp_iat_mean,resp_iat_median,resp_iat_min,resp_iat_max,resp_iat_std,\
-     final_total_payload_bytes,final_duration_ms";
+     final_total_payload_bytes,final_duration_ms,final_total_pkts";
 
 pub const DNS_HEADER: &str =
     "client_ip_hash,resolved_ip_hash_a,resolved_ip_hash_aaaa,\

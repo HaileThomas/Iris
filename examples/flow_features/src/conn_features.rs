@@ -114,6 +114,7 @@ pub struct ConnFeatures {
 
     pub final_total_payload_bytes: u64,  // total payload bytes across full connection (both directions)
     pub final_duration_ms: u64,          // elapsed time between first and last packet of full connection (ms)
+    pub final_total_pkts: u64,           // total packets across full connection (both directions)
 }
 
 impl ConnFeatures {
@@ -200,6 +201,7 @@ impl ConnFeatures {
 
             final_total_payload_bytes: conn.orig.nb_payload_bytes + conn.resp.nb_payload_bytes,
             final_duration_ms: conn.duration().as_millis() as u64,
+            final_total_pkts: conn.total_pkts(),
         })
     }
 }
